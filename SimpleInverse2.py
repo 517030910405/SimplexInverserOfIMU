@@ -37,7 +37,7 @@ def IntegralBuilder(N, M, dT, InitMotion = None):
         b,
     ]
 
-def Integral(X, N, M, dT, InitMotion = None):
+def Integral(X, N, M, dT, InitMotion = None, early_split = 0):
     if InitMotion is None:
         InitMotion = np.zeros((M,))
     AnsMotion = np.zeros((M,))
@@ -46,7 +46,7 @@ def Integral(X, N, M, dT, InitMotion = None):
     for i in range(M):
         Ap = upperTriangle(N) * dT
         X = np.matmul(Ap,X) + InitMotion[i]
-        AnsMotion[i] = X[X.shape[0]-1]
+        AnsMotion[i] = X[X.shape[0]-1-early_split]
         accel.append(X)
     return X, AnsMotion, accel 
 def SimplexBuilder(A, b, GT, GTI):
@@ -96,7 +96,7 @@ def demo():
     print(A)
     print(np.matmul(A,X))
 
-def run_part(GT = None,init = None,order=3):
+def run_part(GT = None,init = None,order=3,early_split = 0):
     # init = np.array([1.,1.,1.])
     GT = np.array(GT)
     PoseFs = 10.
@@ -109,8 +109,8 @@ def run_part(GT = None,init = None,order=3):
     X,res = SimplexBuilder(A,b,SGT,[(i+1)*FsFs-1 for i in range(0,len(SGT))])
     X = X[:MAXSIZE]
     # print("POSE",(np.matmul(A,X)+b.reshape((-1,))))
-    Pose = Integral(X, MAXSIZE, order, 1/RealFs,init)
-    # print(Pose)
+    Pose = Integral(X, MAXSIZE, order, 1/RealFs,init,early_split=early_split)
+    # print(Pose[0],Pose[0].shape)
     return Pose[0], Pose[1], Pose[2]
 
 def run():
@@ -147,7 +147,7 @@ def SampleSimplex():
     print(res)
     print(res.get("x"))
 
-def GetAccel(GT , higher = 1, init = None, batch = 30):
+def GetAccel(GT , higher = 1, init = None, batch = 20, MoreGT = 5, early_split = 50):
     GT = np.array(GT)
     order = 2+higher
     if init is None:
@@ -155,9 +155,9 @@ def GetAccel(GT , higher = 1, init = None, batch = 30):
         init[order-1] = GT[0]
     ACCEL = []
     for i in range(GT.shape[0]//batch):
-        Pose,init,accel = run_part(GT[i*batch:(i+1)*batch],init,order)
+        Pose,init,accel = run_part(GT[i*batch:(i+1)*batch+MoreGT],init,order,early_split=early_split)
         print(init)
-        ACCEL+=list(accel[len(accel)-2-1])
+        ACCEL+=list(accel[len(accel)-2-1])[:batch*10]
     init = np.zeros((2,))
     init[2-1] = GT[0]
     ANS = Integral(ACCEL,len(ACCEL),2,1e-2,init)
@@ -168,11 +168,11 @@ def GetAccel(GT , higher = 1, init = None, batch = 30):
     return ACCEL, ANS[0]
 
 
-def GetAllAccel(GT, higher = 0, init = [None,None,None] , batch = 30):
+def GetAllAccel(GT, higher = 0, init = [None,None,None] , batch = 30, MoreGT = 5, early_split = 50):
     allaccel = []
     allpose  = []
     for i in range(3):
-        accel, pose = GetAccel(GT[:,i],higher,init[i],batch)
+        accel, pose = GetAccel(GT[:,i],higher,init[i],batch, MoreGT, early_split)
         allaccel.append(accel)
         allpose.append(pose)
     allpose = np.array(allpose)
@@ -182,9 +182,20 @@ def GetAllAccel(GT, higher = 0, init = [None,None,None] , batch = 30):
 
 if (__name__=="__main__"):
     # demo()
-    GT = np.loadtxt("pose_left.txt",delimiter=" ")
-    pose, accel = GetAllAccel(GT[:],higher=1,batch=40)
-    plt.plot(pose[0],pose[1])
-    plt.savefig("simplex11.png")
-    plt.plot(GT[:,0],GT[:,1])
-    plt.savefig("simplex12.png")
+    if False:
+        ## This Part is the higher order estimation for lower variance in ACCEL
+        GT = np.loadtxt("pose_left.txt",delimiter=" ")
+        pose, accel = GetAllAccel(GT[:],higher=1,batch=30)
+        plt.plot(pose[0],pose[1])
+        plt.savefig("simplex11.png")
+        plt.plot(GT[:,0],GT[:,1])
+        plt.savefig("simplex12.png")
+    if True:
+        ## This Part is the lower order estimation for lower vibration in POSE
+        GT = np.loadtxt("pose_left.txt",delimiter=" ")
+        pose, accel = GetAllAccel(GT[:],higher=0,batch=20,MoreGT=5,early_split=50)
+        plt.plot(pose[0],pose[1])
+        plt.savefig("simplex01.png")
+        plt.plot(GT[:,0],GT[:,1])
+        plt.savefig("simplex02.png")
+        np.savetxt("result0.csv",accel)
