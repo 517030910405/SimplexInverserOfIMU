@@ -154,10 +154,12 @@ def GetAccel(GT , higher = 1, init = None, batch = 20, MoreGT = 5, early_split =
         init = np.zeros((order,))
         init[order-1] = GT[0]
     ACCEL = []
+    VEL = []
     for i in range(GT.shape[0]//batch):
         Pose,init,accel = run_part(GT[i*batch:(i+1)*batch+MoreGT],init,order,early_split=early_split)
         print(init)
         ACCEL+=list(accel[len(accel)-2-1])[:batch*10]
+        VEL +=list(accel[len(accel)-1-1])[:batch*10]
     init = np.zeros((2,))
     init[2-1] = GT[0]
     ANS = Integral(ACCEL,len(ACCEL),2,1e-2,init)
@@ -165,19 +167,22 @@ def GetAccel(GT , higher = 1, init = None, batch = 20, MoreGT = 5, early_split =
     # print(ANS[1])
     # print(GT[:GT.shape[0]//batch*batch])
     print("OK")
-    return ACCEL, ANS[0]
+    return ACCEL, VEL,  ANS[0]
 
 
 def GetAllAccel(GT, higher = 0, init = [None,None,None] , batch = 30, MoreGT = 5, early_split = 50):
     allaccel = []
     allpose  = []
+    allvel = []
     for i in range(3):
-        accel, pose = GetAccel(GT[:,i],higher,init[i],batch, MoreGT, early_split)
+        accel, vel, pose = GetAccel(GT[:,i],higher,init[i],batch, MoreGT, early_split)
         allaccel.append(accel)
         allpose.append(pose)
+        allvel.append(vel)
     allpose = np.array(allpose)
     allaccel = np.array(allaccel)
-    return allpose, allaccel
+    allvel = np.array(allvel)
+    return allpose, allvel, allaccel
     # print(allpose)
 
 if (__name__=="__main__"):
@@ -185,26 +190,38 @@ if (__name__=="__main__"):
     if False:
         ## This Part is the higher order estimation for lower variance in ACCEL
         GT = np.loadtxt("pose_left.txt",delimiter=" ")
-        pose, accel = GetAllAccel(GT[:],higher=1,batch=30)
+        pose, vel, accel = GetAllAccel(GT[:],higher=1,batch=30)
         plt.plot(pose[0],pose[1])
         plt.savefig("simplex11.png")
         plt.plot(GT[:,0],GT[:,1])
         plt.savefig("simplex12.png")
-    if False:
-        ## This Part is the lower order estimation for lower vibration in POSE
-        GT = np.loadtxt("pose_left.txt",delimiter=" ")
-        pose, accel = GetAllAccel(GT[:],higher=0,batch=20,MoreGT=5,early_split=50)
-        plt.plot(pose[0],pose[1])
-        plt.savefig("simplex01.png")
-        plt.plot(GT[:,0],GT[:,1])
-        plt.savefig("simplex02.png")
-        np.savetxt("result0.csv",accel)
     if True:
         ## This Part is the lower order estimation for lower vibration in POSE
         GT = np.loadtxt("pose_left.txt",delimiter=" ")
-        pose, accel = GetAllAccel(GT[:],higher=0,batch=20,MoreGT=5,early_split=50)
-        plt.plot(pose[0],pose[1])
-        plt.savefig("simplex01.png")
-        plt.plot(GT[:,0],GT[:,1])
-        plt.savefig("simplex02.png")
+        pose, vel, accel = GetAllAccel(GT[:],higher=0,batch=40,MoreGT=5,early_split=50)
+        plt.figure()
+        plt.plot(pose[0],pose[1],'-',GT[:,0],GT[:,1],'--')
+        plt.legend(['Simplex', 'True'])
+        plt.title("Simplex")
+        plt.savefig("simplexRt.png")
         np.savetxt("result0.csv",accel)
+        np.savetxt("result_vel.csv",vel)
+        np.savetxt("result_accel.csv",accel)
+    if False:
+        vel = np.loadtxt("result_vel.csv")
+        accel = np.loadtxt("result_accel.csv")
+        plt.figure()
+        plt.plot(np.arange(accel.shape[1])*1e-2, np.linalg.norm(accel,axis=0),'-')
+        plt.legend(['Simplex', 'True'])
+        plt.title('accel')
+        plt.savefig("sim_accel_k=5,s=0.png")
+    if False:
+        vel = np.loadtxt("result_vel.csv")
+        accel = np.loadtxt("result_accel.csv")
+        plt.figure()
+        plt.plot(np.arange(vel.shape[1])*1e-2, np.linalg.norm(vel,axis=0),'-')
+        plt.legend(['Simplex', 'True'])
+        plt.title('velocity')
+        plt.savefig("sim_vel_k=5,s=0.png")
+
+        pass
