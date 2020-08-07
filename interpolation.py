@@ -151,6 +151,11 @@ def demo(GT, accel, vel, pose, rt = 'img2/'):
 
     accel_sth_resim, vel_sth_resim, pose_sth_resim = integrate_smooth(accel_simplex,init_motion=init_motion_simplex,dt=1e-2)
     accel_resim, vel_resim, pose_resim = integrate(accel_simplex,init_motion=init_motion_simplex,dt=1e-2)
+    
+    print(np.linalg.norm((np.array(pose_sth).T)[np.arange(GT.shape[0],dtype=np.int64)*10]-GT[:,:3],axis=1).mean())
+    print(np.linalg.norm((np.array(pose_).T)[np.arange(GT.shape[0],dtype=np.int64)*10]-GT[:,:3],axis=1).mean())
+    print(np.linalg.norm((np.array(pose_resim).T)[np.arange(pose_resim.shape[1]//10,dtype=np.int64)*10+9]-GT[:400,:3],axis=1).mean())
+    print(np.linalg.norm((np.array(pose_sth_resim).T)[np.arange(pose_resim.shape[1]//10,dtype=np.int64)*10+9]-GT[:400,:3],axis=1).mean())
 
     plt.figure()
     plt.plot(pose[0], pose[1],'-', GT[:,0], GT[:,1],'--')
@@ -218,6 +223,6 @@ def main():
     GT = np.loadtxt("pose_left.txt",delimiter=" ")
     accel,vel,pose = fit(GT)
     demo(GT,accel,vel,pose)
-    
+
 if (__name__ == '__main__'):
     main()
