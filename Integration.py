@@ -20,6 +20,7 @@ def integrate(accel, dt = 1e-2, init_motion = None):
         velocity[:,i] = np.array(motion[1])
         pose[:,i] = np.array(motion[2])
     return accel, velocity, pose
+    
 def integrate_smooth(accel, dt = 1e-2, init_motion = None):
     if init_motion is None:
         init_motion = np.zeros((3,3))

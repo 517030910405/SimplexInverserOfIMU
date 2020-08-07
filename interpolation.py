@@ -6,7 +6,6 @@ from Integration import integrate,integrate_smooth
 def function1():
     GT = np.loadtxt("pose_left.txt", delimiter=" ")
 
-
     x = np.linspace(0, 10, num=11, endpoint=True)
     y = np.cos(-x**2/9.0)
     f = interp1d(x, y)
@@ -54,6 +53,11 @@ def fit(GT):
     np.linalg.norm(accel,axis=0)
     vel = np.array(vel)
     pose = np.array(pose)
+    return accel, vel, pose
+
+def demo_interpolation(GT, accel, vel, pose):
+    t = np.arange(GT.shape[0],dtype=np.float64)*.1
+    t_new = np.arange((GT.shape[0]-1)*10+1,dtype=np.float64)*.01
     print(accel)
     print(vel)
 
@@ -80,85 +84,146 @@ def fit(GT):
     accel_sth, vel_sth, pose_sth = integrate_smooth(accel,init_motion=init_motion_interpolation,dt=1e-2)
     accel_, vel_, pose_ = integrate(accel,init_motion=init_motion_interpolation,dt=1e-2)
 
-    # accel_sth, vel_sth, pose_sth = integrate_smooth(accel_simplex,init_motion=init_motion_simplex,dt=1e-2)
-    # accel_, vel_, pose_ = integrate(accel_simplex,init_motion=init_motion_simplex,dt=1e-2)
+
+    plt.figure()
+    plt.plot(pose[0], pose[1],'-', GT[:,0], GT[:,1],'--')
+    plt.legend(['Interpolation', 'True'])
+    plt.title('interpolation')
+    plt.savefig("interpolation_direct.png")
+
+    plt.figure()
+    plt.plot(pose_[0], pose_[1],'-',pose_sth[0], pose_sth[1],'-', GT[:,0], GT[:,1],'--')
+    plt.legend(['Interpolation-reintegral-simple integration','Interpolation-reintegral-spline during integration', 'True'])
+    plt.title('interpolation')
+    plt.savefig("interpolation_reintegral.png")
+
+    plt.figure()
+    plt.plot(t_new, np.linalg.norm(vel,axis=0),'-')
+    plt.legend(['Interpolation', 'Simplex'])
+    plt.title('velocity')
+    plt.savefig("vel_interpolation_direct.png")
+    
+    plt.figure()
+    plt.plot(t_new, np.linalg.norm(accel,axis=0),'-')
+    plt.legend(['Interpolation', 'Simplex'])
+    plt.title('accel')
+    plt.savefig("accel_interpolation_direct.png")
+
+    plt.figure()
+    plt.plot(t_new, np.linalg.norm(vel,axis=0),'--', t_simplex, np.linalg.norm(vel_simplex,axis=0),'--')
+    plt.legend(['Interpolation', 'Simplex'])
+    plt.title('velocity')
+    plt.savefig("vel_compare_direct.png")
+
+    plt.figure()
+    plt.plot(t_new, np.linalg.norm(accel,axis=0),'--', t_simplex, np.linalg.norm(accel_simplex,axis=0),'--')
+    plt.legend(['Interpolation', 'Simplex'])
+    plt.title('accel')
+    plt.savefig("accel_compare_.png")
+    
+
+def demo(GT, accel, vel, pose, rt = 'img2/'):
+    t = np.arange(GT.shape[0],dtype=np.float64)*.1
+    t_new = np.arange((GT.shape[0]-1)*10+1,dtype=np.float64)*.01
+    print(accel)
+    print(vel)
+
+    vel_simplex = np.loadtxt("result_vel.csv")
+    accel_simplex = np.loadtxt("result_accel.csv")
+    t_simplex = np.arange(accel_simplex.shape[1])*1e-2
+
+    # print(np.arange(GT.shape[0],dtype=np.int32)*10)
+    print(np.linalg.norm((np.array(pose).T)[np.arange(GT.shape[0],dtype=np.int64)*10]-GT[:,:3],axis=1).mean())
+
+    init_motion_interpolation = np.array(
+        [accel[:,0],
+        vel[:,0],
+        pose[:,0],]
+    )
+
+    init_motion_simplex = np.array(
+        [[0,0,0],
+        [0,0,0],
+        GT[0,:3]]
+    )
+
+
+    accel_sth, vel_sth, pose_sth = integrate_smooth(accel,init_motion=init_motion_interpolation,dt=1e-2)
+    accel_, vel_, pose_ = integrate(accel,init_motion=init_motion_interpolation,dt=1e-2)
 
     accel_sth_resim, vel_sth_resim, pose_sth_resim = integrate_smooth(accel_simplex,init_motion=init_motion_simplex,dt=1e-2)
     accel_resim, vel_resim, pose_resim = integrate(accel_simplex,init_motion=init_motion_simplex,dt=1e-2)
 
 
-    # accel_cal_sim, vel_cal_sim, pose_cal_sim = integrate(accel, init_motion=)
 
+    plt.figure()
+    plt.plot(pose[0], pose[1],'-', GT[:,0], GT[:,1],'--')
+    plt.legend(['Interpolation', 'True'])
+    plt.title('interpolation')
+    plt.savefig(rt+"interpolation_direct.png")
 
-    # plt.figure()
-    # plt.plot(pose[0], pose[1],'-', GT[:,0], GT[:,1],'--')
-    # plt.legend(['Interpolation', 'True'])
-    # plt.title('interpolation')
-    # plt.savefig("interpolation_k=5,s=0.png")
-
-    # plt.figure()
-    # plt.plot(pose_[0], pose_[1],'-',pose_sth[0], pose_sth[1],'-', GT[:,0], GT[:,1],'--')
-    # plt.legend(['Interpolation-reintegral-simple integration','Interpolation-reintegral-spline during integration', 'True'])
-    # plt.title('interpolation')
-    # plt.savefig("interpolation_reintegral.png")
+    plt.figure()
+    plt.plot(pose_[0], pose_[1],'-',pose_sth[0], pose_sth[1],'-', GT[:,0], GT[:,1],'--')
+    plt.legend(['Interpolation-reintegral-simple integration','Interpolation-reintegral-spline during integration', 'True'])
+    plt.title('interpolation')
+    plt.savefig(rt+"interpolation_reintegral.png")
 
 
     plt.figure()
     plt.plot(pose_resim[0], pose_resim[1],'-',pose_sth_resim[0], pose_sth_resim[1],'-', GT[:,0], GT[:,1],'--')
     plt.legend(['Simplex-reintegral-simple integration','Simplex-reintegral-spline during integration', 'True'])
     plt.title('Simplex')
-    plt.savefig("Simplex_reintegral.png")
+    plt.savefig(rt+"Simplex_reintegral.png")
 
+    plt.figure()
+    plt.plot(pose[0][2500:], pose[1][2500:],'-', GT[250:,0], GT[250:,1],'--')
+    plt.legend(['Interpolation', 'True'])
+    plt.title('interpolation')
+    plt.savefig(rt+"interpolation_ZoomIn.png")
 
-    # plt.figure()
-    # plt.plot(pose[0][2500:], pose[1][2500:],'-', GT[250:,0], GT[250:,1],'--')
-    # plt.legend(['Interpolation', 'True'])
-    # plt.title('interpolation')
-    # plt.savefig("interpolation_ZoomIn.png")
-
-
-    # plt.figure()
-    # plt.plot(t_new, np.linalg.norm(vel,axis=0),'-')
-    # plt.legend(['Interpolation', 'Simplex'])
-    # plt.title('velocity')
-    # plt.savefig("vel_interpolation_k=5,s=0.png")
+    plt.figure()
+    plt.plot(t_new, np.linalg.norm(vel,axis=0),'-')
+    plt.legend(['Interpolation', 'Simplex'])
+    plt.title('velocity')
+    plt.savefig(rt+"interpolation_vel_direct.png")
     
-    # plt.figure()
-    # plt.plot(t_new, np.linalg.norm(accel,axis=0),'-')
-    # plt.legend(['Interpolation', 'Simplex'])
-    # plt.title('accel')
-    # plt.savefig("accel_interpolation_k=5,s=0.png")
+    plt.figure()
+    plt.plot(t_new, np.linalg.norm(accel,axis=0),'-')
+    plt.legend(['Interpolation', 'Simplex'])
+    plt.title('accel')
+    plt.savefig(rt+"interpolation_accel_direct.png")
 
-    # plt.figure()
-    # plt.plot(t_new, np.linalg.norm(vel,axis=0),'--', t_simplex, np.linalg.norm(vel_simplex,axis=0),'--')
-    # plt.legend(['Interpolation', 'Simplex'])
-    # plt.title('velocity')
-    # plt.savefig("vel_compare_k=5,s=0.png")
+    plt.figure()
+    plt.plot(t_new, np.linalg.norm(vel,axis=0),'--', t_simplex, np.linalg.norm(vel_simplex,axis=0),'--')
+    plt.legend(['Interpolation', 'Simplex'])
+    plt.title('velocity')
+    plt.savefig(rt+"vel_compare_direct.png")
 
-    # plt.figure()
-    # plt.plot(
-    #     t_new, np.linalg.norm(vel_,axis=0),'--', 
-    #     t_new, np.linalg.norm(vel_sth,axis=0),'--',
-    #     t_simplex, np.linalg.norm(vel_resim,axis=0),'--',
-    #     t_simplex, np.linalg.norm(vel_sth_resim,axis=0),'--',
-    # )
-    # plt.legend([
-    #     'Interpolation - Simple Integration','Interpolation - Spline Integration',
-    #     'Simplex - Simple Integration','Simplex - Spline Integration',
-    # ])
-    # plt.title('velocity after re-integration')
-    # plt.savefig("vel_compare_re-int.png")
+    plt.figure()
+    plt.plot(
+        t_new, np.linalg.norm(vel_,axis=0),'--', 
+        t_new, np.linalg.norm(vel_sth,axis=0),'--',
+        t_simplex, np.linalg.norm(vel_resim,axis=0),'--',
+        t_simplex, np.linalg.norm(vel_sth_resim,axis=0),'--',
+    )
+    plt.legend([
+        'Interpolation - Simple Integration','Interpolation - Spline Integration',
+        'Simplex - Simple Integration','Simplex - Spline Integration',
+    ])
+    plt.title('velocity after re-integration')
+    plt.savefig(rt+"vel_compare_re-integration.png")
 
 
-    # plt.figure()
-    # plt.plot(t_new, np.linalg.norm(accel,axis=0),'--', t_simplex, np.linalg.norm(accel_simplex,axis=0),'--')
-    # plt.legend(['Interpolation', 'Simplex'])
-    # plt.title('accel')
-    # plt.savefig("accel_compare_.png")
+    plt.figure()
+    plt.plot(t_new, np.linalg.norm(accel,axis=0),'--', t_simplex, np.linalg.norm(accel_simplex,axis=0),'--')
+    plt.legend(['Interpolation', 'Simplex'])
+    plt.title('accel')
+    plt.savefig(rt+"accel_compare_direct.png")
     
     pass
 def main():
     GT = np.loadtxt("pose_left.txt",delimiter=" ")
-    fit(GT)
+    accel,vel,pose = fit(GT)
+    demo(GT,accel,vel,pose)
 # function2()
 main()
