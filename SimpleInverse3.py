@@ -204,9 +204,21 @@ if (__name__=="__main__"):
         plt.legend(['Simplex', 'True'])
         plt.title("Simplex")
         plt.savefig("simplexRt.png")
+        np.savetxt("result_x.csv",pose)
         np.savetxt("result0.csv",accel)
+
         np.savetxt("result_vel.csv",vel)
         np.savetxt("result_accel.csv",accel)
+    if False:
+        GT = np.loadtxt("pose_left.txt",delimiter=" ")
+        pose = np.loadtxt("result_x.csv")
+        plt.figure()
+        plt.plot(pose[0][2500:],pose[1][2500:],'-',GT[250:,0],GT[250:,1],'--')
+        plt.legend(['Simplex', 'True'])
+        plt.title("Simplex")
+        plt.savefig("simplexZoomIn.png")
+
+
     if False:
         vel = np.loadtxt("result_vel.csv")
         accel = np.loadtxt("result_accel.csv")
